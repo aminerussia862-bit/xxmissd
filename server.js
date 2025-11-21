@@ -9,9 +9,9 @@ puppeteer.use(StealthPlugin());
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// إضافة متغيرات التليجرام - استخدم Environment Variables في Replit
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+// ✅ القيم مباشرة بدون Environment Variables
+const TELEGRAM_BOT_TOKEN = "8357160519:AAFuZ6w3daWbXCKZ_ZdzgFAQCjplasU287A";
+const TELEGRAM_CHAT_ID = "7232694063";
 
 app.use(express.json());
 app.use(express.static("public"));
