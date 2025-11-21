@@ -2,19 +2,25 @@ import express from "express";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { UAParser } from 'ua-parser-js';
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import fs from "fs";
 
 // تفعيل وضع التخفّي
 puppeteer.use(StealthPlugin());
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ القيم مباشرة بدون Environment Variables
-const TELEGRAM_BOT_TOKEN = "8357160519:AAFuZ6w3daWbXCKZ_ZdzgFAQCjplasU287A";
-const TELEGRAM_CHAT_ID = "7232694063";
+// إضافة متغيرات التليجرام
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8357160519:AAFuZ6w3daWbXCKZ_ZdzgFAQCjplasU287A";
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "7232694063";
 
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static(join(__dirname, "public")));
 
 // تخزين للزيارات السابقة (مدى الحياة)
 const visitorCache = new Map();
@@ -95,7 +101,6 @@ function getEnhancedSystemInfo(userAgent) {
 // دالة إرسال إشعار التليجرام
 async function sendTelegramNotification(message) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-    console.warn("⚠️ Telegram credentials missing - notification skipped");
     return false;
   }
 
@@ -117,7 +122,6 @@ async function sendTelegramNotification(message) {
     const result = await response.json();
     return result.ok;
   } catch (error) {
-    console.error("Telegram notification error:", error);
     return false;
   }
 }
@@ -293,7 +297,6 @@ app.post("/api/bypass", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Bypass error:", error);
     return res.status(500).json({ 
       success: false, 
       error: "Service temporarily unavailable" 
@@ -305,20 +308,14 @@ app.post("/api/bypass", async (req, res) => {
 async function extractDownloadLink(fullUrl, referer, site) {
   let browser;
   try {
-    // إعدادات متوافقة مع Replit
     browser = await puppeteer.launch({
-      headless: true,
-      executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser',
+      headless: "new",
+      defaultViewport: null,
       args: [
         "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--single-process",
-        "--disable-gpu",
-        "--disable-web-security"
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process",
+        "--window-size=1366,768",
       ],
     });
 
@@ -341,7 +338,7 @@ async function extractDownloadLink(fullUrl, referer, site) {
 
     await page.goto(fullUrl, {
       waitUntil: "networkidle2",
-      timeout: 30000,
+      timeout: 180000,
     });
 
     await new Promise((res) => setTimeout(res, 6000));
@@ -416,7 +413,6 @@ async function extractDownloadLink(fullUrl, referer, site) {
 
     return downloadUrl;
   } catch (err) {
-    console.error("Puppeteer error:", err);
     return null;
   } finally {
     if (browser) await browser.close();
@@ -424,11 +420,7 @@ async function extractDownloadLink(fullUrl, referer, site) {
 }
 
 app.get("/", (req, res) => {
-  res.sendFile("index.html", { root: "public" });
-});
-
-app.get("/health", (req, res) => {
-  res.json({ status: "OK", message: "Server is running" });
+  res.sendFile(join(__dirname, "public", "index.html"));
 });
 
 app.listen(PORT, () => console.log(`🚀 Server started on port ${PORT}`));
